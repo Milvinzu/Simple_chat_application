@@ -20,6 +20,13 @@ namespace Simple_chat_application.Controllers
         [HttpPost]
         public async Task<ActionResult<User>> PostUser(User user)
         {
+            var existingUser = _context.Users.FirstOrDefault(u => u.UserName == user.UserName);
+
+            if (existingUser != null)
+            {
+                return BadRequest(new { message = "Nickname already exists" });
+            }
+
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
