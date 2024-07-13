@@ -42,7 +42,7 @@ namespace Simple_chat_application.Controllers
             {
                 UserChatId = Guid.NewGuid(),
                 ChatId = chat.ChatId,
-                UserId = createdByUser.UserId
+                UserId = chat.CreatedByUserId
             };
 
             _context.UserChats.Add(userChat);
@@ -50,6 +50,7 @@ namespace Simple_chat_application.Controllers
 
             return Ok("Chat successfully created");
         }
+
 
 
         [HttpGet("GetAll")]
@@ -79,5 +80,32 @@ namespace Simple_chat_application.Controllers
             return Ok("Chat was deleted");
         }
 
+        [HttpPost("AddUserToChat")]
+        public async Task<IActionResult> AddUserToChat([FromQuery] Guid userId, [FromQuery] Guid chatId)
+        {
+            var chat = await _context.Chats.FindAsync(chatId);
+            if (chat == null)
+            {
+                return NotFound("Chat not found.");
+            }
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            var userChat = new UserChat
+            {
+                UserChatId = Guid.NewGuid(),
+                ChatId = chatId,
+                UserId = userId
+            };
+
+            _context.UserChats.Add(userChat);
+            await _context.SaveChangesAsync();
+
+            return Ok("User added to chat successfully.");
+        }
     }
 }
