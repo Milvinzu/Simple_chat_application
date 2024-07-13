@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Simple_chat_application.Data;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +15,8 @@ builder.Services.AddSwaggerGen();
 //Add DBCOntext
 builder.Services.AddDbContext<ChatDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("ChatDatabase")));
+builder.Services.AddControllers().AddJsonOptions(options =>
+options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.Preserve);
 
 var app = builder.Build();
 
