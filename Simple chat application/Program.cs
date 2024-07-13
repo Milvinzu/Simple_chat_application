@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Simple_chat_application.Data;
+using Simple_chat_application.Hubs;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,6 +18,7 @@ builder.Services.AddDbContext<ChatDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("ChatDatabase")));
 builder.Services.AddControllers().AddJsonOptions(options =>
 options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.Preserve);
+builder.Services.AddSignalR();
 
 var app = builder.Build();
 
@@ -30,5 +32,6 @@ if (app.Environment.IsDevelopment())
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<ChatHub>("/chatHub");
 
 app.Run();
