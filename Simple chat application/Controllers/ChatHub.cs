@@ -1,35 +1,26 @@
 ﻿using Microsoft.AspNetCore.SignalR;
-using Microsoft.EntityFrameworkCore;
-using Simple_chat_application.Data;
+using Simple_chat_application.Services.Interfaces;
 using Simple_chat_application.Model;
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Simple_chat_application.Hubs
 {
     public class ChatHub : Hub
     {
-        private readonly ChatDbContext _context;
+        private readonly IMessageService _messageService;
 
-        public ChatHub(ChatDbContext context)
+        public ChatHub(IMessageService messageService)
         {
-            _context = context;
+            _messageService = messageService;
         }
 
         public async Task SendMessage(Guid userId, string message, Guid chatId)
         {
-            // Get the user from the database
-            var userEntity = await _context.Users.FirstOrDefaultAsync(u => u.UserId == userId);
-            if (userEntity == null)
+            var userChat = await _messageService.ValidateUserInChat(userId, chatId);
+            if (!userChat)
             {
-                throw new Exception("User not found.");
-            }
-
-            var userChat = await _context.UserChats.FirstOrDefaultAsync(uc => uc.ChatId == chatId && uc.UserId == userId);
-            if (userChat == null)
-            {
-                throw new Exception("User is not a member of the chat.");
+                throw new HubException("User is not a member of the chat.");
             }
 
             var messageEntity = new Message
@@ -37,18 +28,14 @@ namespace Simple_chat_application.Hubs
                 MessageId = Guid.NewGuid(),
                 Text = message,
                 dateTime = DateTime.UtcNow,
-                UserId = userEntity.UserId,
+                UserId = userId,
                 ChatId = chatId
             };
 
-            _context.Messages.Add(messageEntity);
-            await _context.SaveChangesAsync();
+            await _messageService.AddMessageAsync(messageEntity);
 
             var shortTime = messageEntity.dateTime.ToString("HH:mm");
-
-            await Clients.All.SendAsync("ReceiveMessage", userEntity.UserName, message, shortTime);
-
+            await Clients.All.SendAsync("ReceiveMessage", userId, message, shortTime);
         }
-
     }
 }

@@ -1,7 +1,8 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Simple_chat_application.Data;
+﻿using Microsoft.AspNetCore.Mvc;
 using Simple_chat_application.Model;
+using Simple_chat_application.Services.Interfaces;
+using System;
+using System.Threading.Tasks;
 
 namespace Simple_chat_application.Controllers
 {
@@ -9,43 +10,39 @@ namespace Simple_chat_application.Controllers
     [ApiController]
     public class UsersController : ControllerBase
     {
-        private readonly ChatDbContext _context;
+        private readonly IUserService _userService;
 
-        public UsersController(ChatDbContext context)
+        public UsersController(IUserService userService)
         {
-            _context = context;
+            _userService = userService;
         }
 
-        // POST api/users
         [HttpPost]
         public async Task<ActionResult<User>> PostUser(User user)
         {
-            var existingUser = _context.Users.FirstOrDefault(u => u.UserName == user.UserName);
-
-            if (existingUser != null)
+            try
             {
-                return BadRequest(new { message = "Nickname already exists" });
+                var createdUser = await _userService.CreateUserAsync(user);
+                return CreatedAtAction(nameof(GetUser), new { id = createdUser.UserId }, createdUser);
             }
-
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction("GetUser", new { id = user.UserId }, user);
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
-        // GET api/users/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<User>> GetUser(Guid id)
         {
-            var user = await _context.Users.FindAsync(id);
-
-            if (user == null)
+            try
             {
-                return NotFound();
+                var user = await _userService.GetUserAsync(id);
+                return Ok(user);
             }
-
-            return user;
+            catch (Exception ex)
+            {
+                return NotFound(ex.Message);
+            }
         }
-
     }
 }

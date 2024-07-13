@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Simple_chat_application.Data;
 using Simple_chat_application.Model;
+using Simple_chat_application.Services.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Simple_chat_application.Controllers
 {
@@ -10,111 +12,60 @@ namespace Simple_chat_application.Controllers
     [ApiController]
     public class ChatController : ControllerBase
     {
-        private readonly ChatDbContext _context;
+        private readonly IChatService _chatService;
 
-        public ChatController(ChatDbContext context)
+        public ChatController(IChatService chatService)
         {
-            _context = context;
+            _chatService = chatService;
         }
 
         [HttpPost]
         public async Task<ActionResult<Chat>> PostChat(Chat chat)
         {
-            var existingChat = await _context.Chats.FirstOrDefaultAsync(u => u.ChatName == chat.ChatName);
-
-            if (existingChat != null)
+            try
             {
-                return BadRequest("Chat with this name already exists");
+                var createdChat = await _chatService.CreateChatAsync(chat);
+                return CreatedAtAction(nameof(PostChat), new { id = createdChat.ChatId }, createdChat);
             }
-
-            var createdByUser = await _context.Users.FindAsync(chat.CreatedByUserId);
-            if (createdByUser == null)
+            catch (Exception ex)
             {
-                return BadRequest("Invalid user ID");
+                return BadRequest(ex.Message);
             }
-
-            chat.CreatedByUser = createdByUser;
-
-            _context.Chats.Add(chat);
-            await _context.SaveChangesAsync();
-
-            var userChat = new UserChat
-            {
-                UserChatId = Guid.NewGuid(),
-                ChatId = chat.ChatId,
-                UserId = chat.CreatedByUserId
-            };
-
-            _context.UserChats.Add(userChat);
-            await _context.SaveChangesAsync();
-
-            return Ok("Chat successfully created");
         }
-
-
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Chat>>> GetChats([FromQuery] string chatName = null)
         {
-            if (string.IsNullOrEmpty(chatName))
-            {
-                return await _context.Chats.ToListAsync();
-            }
-
-            var chats = await _context.Chats
-                .Where(c => c.ChatName.Contains(chatName))
-                .ToListAsync();
-
+            var chats = await _chatService.GetChatsAsync(chatName);
             return Ok(chats);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteChat(Guid id, [FromHeader(Name = "UserId")] Guid userId)
         {
-
-            var chat = await _context.Chats.FindAsync(id);
-            if (chat == null)
+            try
             {
-                return NotFound();
+                await _chatService.DeleteChatAsync(id, userId);
+                return Ok("Chat was deleted");
             }
-
-            if (chat.CreatedByUserId != userId)
+            catch (Exception ex)
             {
-                return Forbid("This user not owner");
+                return BadRequest(ex.Message);
             }
-
-            _context.Chats.Remove(chat);
-            await _context.SaveChangesAsync();
-
-            return Ok("Chat was deleted");
         }
 
         [HttpPost("AddUserToChat")]
         public async Task<IActionResult> AddUserToChat([FromQuery] Guid userId, [FromQuery] Guid chatId)
         {
-            var chat = await _context.Chats.FindAsync(chatId);
-            if (chat == null)
+            try
             {
-                return NotFound("Chat not found.");
+                await _chatService.AddUserToChatAsync(userId, chatId);
+                return Ok("User added to chat successfully.");
             }
-
-            var user = await _context.Users.FindAsync(userId);
-            if (user == null)
+            catch (Exception ex)
             {
-                return NotFound("User not found.");
+                return BadRequest(ex.Message);
             }
-
-            var userChat = new UserChat
-            {
-                UserChatId = Guid.NewGuid(),
-                ChatId = chatId,
-                UserId = userId
-            };
-
-            _context.UserChats.Add(userChat);
-            await _context.SaveChangesAsync();
-
-            return Ok("User added to chat successfully.");
         }
     }
 }
