@@ -53,10 +53,19 @@ namespace Simple_chat_application.Controllers
 
 
 
-        [HttpGet("GetAll")]
-        public async Task<IEnumerable<Chat>> GetChats()
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<Chat>>> GetChats([FromQuery] string chatName = null)
         {
-            return _context.Chats;
+            if (string.IsNullOrEmpty(chatName))
+            {
+                return await _context.Chats.ToListAsync();
+            }
+
+            var chats = await _context.Chats
+                .Where(c => c.ChatName.Contains(chatName))
+                .ToListAsync();
+
+            return Ok(chats);
         }
 
         [HttpDelete("{id}")]
