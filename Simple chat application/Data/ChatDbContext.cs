@@ -14,11 +14,6 @@ namespace Simple_chat_application.Data
         {
         }
 
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            optionsBuilder.UseSqlite("Data Source=chat.db");
-        }
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<User>()
@@ -59,6 +54,6 @@ namespace Simple_chat_application.Data
                 .WithMany(u => u.Messages)
                 .HasForeignKey(m => m.UserId);
         }
-
     }
+
 }
